@@ -8,3 +8,6 @@ if ('serviceWorker' in navigator) {
             console.log('Registration failed with ' + error);
         });
 }
+
+var startLoc,
+    endLoc;
