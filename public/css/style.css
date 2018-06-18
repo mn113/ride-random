@@ -1,0 +1,37 @@
+body {
+    display: grid;
+    grid-template-rows: 9em 1fr;
+    grid-template-columns: 12em 1fr;
+}
+
+header {
+    grid-row: 1;
+}
+header img {
+    width: 12em;
+}
+nav {
+    grid-row: 1;
+    background: #efe;
+}
+aside {
+    grid-row: 2;
+    height: 100vw;
+    background: #fee;
+}
+main {
+    grid-row: 2;
+    background: #eef;
+    height: 100vw;
+}
+nav, aside, main {
+    padding: 0.5em;
+}
+
+#options {
+
+}
+
+#gmap {
+    border: 1px dotted; 
+}

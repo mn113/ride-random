@@ -14,7 +14,7 @@ app.get('/hw', (req, res) => {
 
 // Start server:
 app.listen(3003, () => {
-    console.log('Example app listening on port 3000!');
+    console.log('Example app listening on port 3003!');
 });
 
 // Set up client:
@@ -33,6 +33,10 @@ googleMapsClient.geocode({
 });
 
 var homeCoords = [51.454513,-2.58791];
+
+function lookupPlace(typing) {
+
+}
 
 function genPoint(last, nextlast) {
 

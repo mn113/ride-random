@@ -2,35 +2,48 @@
 <html lang="en">
 
 <head>
-  <meta charset="utf-8">
-  <meta http-equiv="x-ua-compatible" content="ie=edge">
-  <title>Bike Ride Generator</title>
-  <meta name="description" content="">
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta charset="utf-8">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <title>Bike Ride Generator</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-  <link rel="manifest" href="site.webmanifest">
+    <link rel="manifest" href="site.webmanifest">
 
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css">
-  <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
-  <!--[if lte IE 9]>
+    <!--[if lte IE 9]>
     <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience and security.</p>
-  <![endif]-->
+    <![endif]-->
 
-  <h1>Bike Ride Generator</h1>
-  <h2>A ProcJam experiment</h2>
+    <header>
+        <img src="img/bikedice.png"/>
+    </header>
 
-  <input name="startLoc"/>
-  <input name="endLoc"/>
-  <input type="checkbox" checked />Circular?
-  <input type="range"/>Distance (km)
-  <input type="number"/>Hilliness (0-5)
+    <nav>
+        <h1>Bike Ride Generator</h1>
+        <h2>A ProcJam experiment</h2>
+    </nav>
 
-  <div id="gmap"></div>
+    <aside>
+        Sidebar
+    </aside>
 
-  <script src="js/frontend.js"></script>
+    <main>
+        <form id="options">
+            <label for="startLoc">Start location:</label><input name="startLoc"/>
+            <input type="checkbox" checked />Circular?<br>
+            <label for="startLoc">End location:</label><input name="endLoc" disabled/><br>
+            <input type="range" min="5" max="250" value="20"/>Distance (km)<br>
+            <input type="range" min="0" max="5" value="2"/>Hilliness (0-5)
+        </form>
+        <div id="gmap"></div>
+    </main>
+
+    <script src="js/frontend.js"></script>
 </body>
 
 </html>
