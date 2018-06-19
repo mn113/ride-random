@@ -1,4 +1,4 @@
-/* global Awesomplete, google */
+/* global Awesomplete, google, axios */
 
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/js/worker.js', {scope: '/js/'})
@@ -38,14 +38,38 @@ input.addEventListener('awesomplete-selectcomplete', (e) => {
     // Start ProcGen
 });
 
-function mapGoToPlace() {
-
-}
-
 var gmap;
 function initMap() {
     gmap = new google.maps.Map(document.getElementById('gmap'), {
         center: {lat: 51, lng: -3},
         zoom: 3
     });
+}
+
+function centreMap(place) {
+    gmap.center(place);
+}
+
+document.querySelector('#options').addEventListener('submit', (event) => {
+    event.preventDefault();
+    requestRoute();
+});
+// Send AJAX request to server with form options:
+function requestRoute() {
+    // Serialize the form:
+    var options = {
+        place: startLoc,
+        circular: document.querySelector('#circular').value,
+        distance: document.querySelector('#distance').value,
+        hills: document.querySelector('#hills').value
+    };
+    console.log(options);
+    // AJAX it:
+    axios.post('/newRoute', options)
+        .then(response => {
+            console.log(response);
+        })
+        .catch(error => {
+            console.log(error);
+        });
 }

@@ -1,15 +1,14 @@
 const fs = require('fs');
 const prettyjson = require('prettyjson');
 const express = require('express');
+const bodyParser = require('body-parser');
 
 const app = express();
+app.use(bodyParser.urlencoded({ extended: true }));
 
 // Set up client:
 const gmapsApiKey = fs.readFileSync('gmaps-apikey.txt', 'utf-8').trim();
 const googleMapsClient = require('@google/maps').createClient({key: gmapsApiKey});
-
-console.log(gmapsApiKey);
-console.log(googleMapsClient);
 
 // Serve static files:
 app.use(express.static('public'));
@@ -44,7 +43,7 @@ app.get('/geocode', (req, res) => {
 app.get('/places/:typing', (req, res) => {
     googleMapsClient.placesAutoComplete({input: req.params.typing}, (err, resp) => {
         if (!err) {
-            console.log(prettyjson.render(resp.json.predictions));
+            //console.log(prettyjson.render(resp.json.predictions));
             res.status(200)
                 .send(resp.json.predictions.map(json => {
                     return {
@@ -60,7 +59,7 @@ app.get('/places/:typing', (req, res) => {
 });
 
 // Snap points to road (requires at least 2 points):    FIXME work with series of points
-app.get('/nearRoads/:lat,:long', (req, res) => {
+/*app.get('/nearRoads/:lat,:long', (req, res) => {
     googleMapsClient.nearestRoads({
         points: [parseFloat(req.params.lat), parseFloat(req.params.long)]
     }, (err, resp) => {
@@ -73,8 +72,9 @@ app.get('/nearRoads/:lat,:long', (req, res) => {
         }
     });
 });
-
+*/
 // Get distance from A to B: [OK]
+
 app.get('/distance/:from/:to', (req, res) => {
     googleMapsClient.distanceMatrix({
         origins: req.params.from,
@@ -106,32 +106,94 @@ app.get('/elevation/:lat,:long', (req, res) => {
     });
 });
 
+// Process frontend request for new route:
+app.post('/newRoute', (req, res) => {
+    console.log('Req.body:', prettyjson.render(req.body));
+    // NOT ACTUALLY USING REQUEST FROM HERE ON
+    var homeCoords = {lat: 51.45269, long: -2.59757};
+    var route = generateRoute(homeCoords); // params?
+    console.log('Route:', route);
+    res.status(200).send(route);
+});
 
 // Start server:
 app.listen(3003, () => {
     console.log('App listening on port 3003!');
 });
 
-//var homeCoords = [51.454513,-2.58791];
-/*
-// Fetch autocomplete suggestions for a placename:
-function lookupPlace(typing) {
+// function toEndOfRoad(segment, point, direction) {} // TODO
 
+// Send AJAX request to Google Places API to get lat & long of place with pid:
+function pidToLatLong(pid) {
+    // TODO
 }
 
-function genPoint(last, nextlast) {
-
+// Generate an entire random route according to the form options:
+function generateRoute(start, circ = false, distance = 20, hills = 2) {
+    var points = [[start.lat, start.long]];
+    // while dist < distance
+    var segment = makeSegment(5, [start.lat, start.long]);
+    var snappedSeg = snapToRoads(segment);  // ASYNC
+    setTimeout(() => {
+        console.log(snappedSeg);
+        points = points.concat(snappedSeg);
+        return points;
+    }, 3000);
 }
 
-function snapPoint(point) {
-
+// Generate a segment of consecutive random points:
+function makeSegment(numPoints, firstPoint) {
+    var segment = [firstPoint];
+    while (numPoints > 0) {
+        var nextPoint;
+        if (segment.length < 2) {
+            nextPoint = makeNextPoint(segment[segment.length - 1], 360 * Math.random());
+        }
+        else {
+            var nextAngle = getAngle(segment[segment.length - 2], segment[segment.length - 1]);
+            nextPoint = makeNextPoint(segment[segment.length - 1], nextAngle);
+        }
+        console.log("NextPoint:", nextPoint);
+        segment.push(nextPoint);
+        //console.log("Seg", segment);
+        numPoints--;
+    }
+    console.log('Segment:', segment);
+    return segment;
 }
 
-function toEndOfRoad(segment, point, direction) {
-
+// Find the angle of the vector from point A to point B:
+function getAngle(pa, pb) {
+    console.log("pa:", pa, ", pb:", pb);
+    // Note: [lat,long] converts to [y,x] for trig
+    var dy = pb[0] - pa[0],
+        dx = pb[1] - pa[1];
+    return Math.atan2(dy, dx) * 180 / Math.PI;
 }
 
-function calcDist(a, b) {
-
+// Generate the next random point on from p using the known vector angle:
+function makeNextPoint(p, angle) {
+    console.log("p:", p, ", angle:", angle);
+    // Let's try 30m steps:
+    var h = 0.0003;
+    // Anywhere except the quadrant we just came from:
+    var newAngle = angle - 135 + 270 * Math.random();
+    var dx = h * Math.sin(newAngle),
+        dy = h * Math.cos(newAngle);
+    return [p[0] + dx, p[1] + dy];
 }
-*/
+
+// Send AJAX request to Roads API to get back road-accurate points:
+function snapToRoads(segment) {
+    googleMapsClient.nearestRoads({
+        points: segment
+    }, (err, resp) => {
+        if (!err) {
+            console.log("Snapped:", prettyjson.render(resp.json));
+            return resp.json.snappedPoints.map(sp => [sp.location.latitude, sp.location.longitude]);
+        }
+        else {
+            console.log(err);
+        }
+    });
+}

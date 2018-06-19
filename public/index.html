@@ -36,14 +36,16 @@
     <main>
         <form id="options">
             <label for="startLoc">Start location:</label><input name="startLoc" id="start"/>
-            <input type="checkbox" checked />Circular ride?<br>
+            <input type="checkbox" checked id="circular"/>Circular ride?<br>
             <!--label for="startLoc">End location:</label><input name="endLoc" id="end" disabled/><br-->
-            <input type="range" min="5" max="250" value="20"/>Distance (km)<br>
-            <input type="range" min="0" max="5" value="2"/>Hilliness (0-5)
+            <input type="range" min="5" max="250" value="20" id="distance"/>Distance (km)<br>
+            <input type="range" min="0" max="5" value="2" id="hills"/>Hilliness (0-5)
+            <button>Generate</button>
         </form>
         <div id="gmap"></div>
     </main>
 
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.2/awesomplete.min.js"></script>
     <script src="js/frontend.js"></script>
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBdVD4i4fhT7Q6C-fA_Mf3ciQvWZDRAb2k&callback=initMap"
