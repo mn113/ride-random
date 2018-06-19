@@ -22,7 +22,7 @@ aside {
 main {
     grid-row: 2;
     background: #eef;
-    height: 100vw;
+    xheight: 100vw;
 }
 nav, aside, main {
     padding: 0.5em;
@@ -33,5 +33,6 @@ nav, aside, main {
 }
 
 #gmap {
-    border: 1px dotted; 
+    border: 1px dotted;
+    height: 100%;
 }
