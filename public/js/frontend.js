@@ -34,7 +34,9 @@ var rideRandom = (function() {
         startInput.addEventListener('awesomplete-selectcomplete', (event) => {
             console.log(event.text);
             startLoc.pid = event.text.value;
+            startLoc.name = event.text.label;
             startInput.value = event.text.label;
+            // Geocode this location to get lat/lng:
             mapping.geocodePlaceId(startLoc.pid);
         });
 
@@ -90,7 +92,6 @@ var rideRandom = (function() {
         // Set up Google Map:
         initMap: function() {
             console.log("mapping.initMap called");
-            // locateUser().then() ?
             gmap = new google.maps.Map(document.getElementById('gmap'), {
                 center: origin,
                 zoom: 5
@@ -100,6 +101,59 @@ var rideRandom = (function() {
             // Turn on bicycling layer:
             var bikeLayer = new google.maps.BicyclingLayer();
             bikeLayer.setMap(gmap);
+
+            mapping.locateUser();
+        },
+
+        // Attempt Geolocation:
+        locateUser: function() {
+            console.log("mapping.locateUser called");
+            if ('geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    origin = {lat: pos.coords.latitude, lng: pos.coords.longitude};
+                    console.log("Set new location:", origin);
+                    mapping.centreMap(origin);
+                    mapping.markMap(origin);
+                }, err => {
+                    console.log(err);
+                }, { // options:
+                    enableHighAccuracy: true,
+                    timeout: 5000,
+                    maximumAge: 0
+                });
+            }
+        },
+
+        // Geocoding (placeId to latLng):
+        geocodePlaceId: function(pid) {
+            console.log("mapping.geocodePlaceId called with", pid);
+            var geocoder = new google.maps.Geocoder();
+            geocoder.geocode({placeId: pid}, (results, status) => {
+                if (status === 'OK') {
+                    if (results[0]) {
+                        //console.log(results[0].geometry.location);
+                        startLoc.lat = results[0].geometry.location.lat();
+                        startLoc.lng = results[0].geometry.location.lng();
+                        mapping.centreMap(startLoc);
+                        mapping.markMap(startLoc);
+                    }
+                } else {
+                    console.log('Geocoder failed due to:', status);
+                }
+            });
+        },
+
+        centreMap: function(place) {
+            gmap.setCenter(new google.maps.LatLng(place));
+            gmap.setZoom(8);      // This will trigger a zoom_changed on the map
+        },
+
+        markMap: function(place) {
+            // Place a marker at user's detected location, or their selected start point:
+            new google.maps.Marker({
+                position: place,
+                map: gmap
+            });
         },
 
         // Draw an array of points onto the Google map:
@@ -125,62 +179,13 @@ var rideRandom = (function() {
                 })
             });
             */
-        },
-
-        // Geocoding (placeId to latLng):
-        geocodePlaceId: function(pid) {
-            console.log("mapping.geocodePlaceId called");
-            var geocoder = new google.maps.Geocoder();
-            geocoder.geocode({placeId: pid}, (results, status) => {
-                if (status === 'OK') {
-                    if (results[0]) {
-                        startLoc.lat = results[0].geometry.location.latitude;
-                        startLoc.lng = results[0].geometry.location.longitude;
-                        mapping.centreMap(startLoc);
-                        mapping.markMap(startLoc);
-                    }
-                } else {
-                    console.log('Geocoder failed due to:', status);
-                }
-            });
-        },
-
-        // Attempt Geolocation:
-        locateUser: function() {
-            console.log("mapping.locateUser called");
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(pos => {
-                    origin = {lat: pos.coords.latitude, lng: pos.coords.longitude};
-                    console.log("Set new location:", origin);
-                    mapping.centreMap(origin);
-                    mapping.markMap(origin);
-                }, err => {
-                    console.log(err);
-                }, { // options:
-                    enableHighAccuracy: true,
-                    timeout: 5000,
-                    maximumAge: 0
-                });
-            }
-        },
-
-        centreMap: function(place) {
-            gmap.setCenter(new google.maps.LatLng(place));
-            gmap.setZoom(8);      // This will trigger a zoom_changed on the map
-        },
-
-        markMap: function(place) {
-            // Place a marker at user's detected location, or their selected start point:
-            new google.maps.Marker({
-                position: place,
-                map: gmap
-            });
         }
     };
 
     // Reveal publicly:
     return {
         gmap: gmap,
+        startLoc: startLoc,
         init: init,
         io: io,
         mapping: mapping
