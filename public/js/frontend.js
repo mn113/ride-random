@@ -12,6 +12,52 @@ if ('serviceWorker' in navigator) {
 }
 
 var startLoc = {};
+var origin = {lat: 56, lng: -3};
+
+// Attempt Geolocation:
+if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+        origin = {lat: pos.coords.latitude, lng: pos.coords.longitude};
+        console.log("Set new location:", origin);
+        centreMap(origin);
+        markMap(origin);
+    }, err => {
+        console.log(err);
+    }, { // options:
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0
+    });
+}
+
+// Set up Google Map:
+var gmap;
+function initMap() {
+    // locateUser().then() ?
+    gmap = new google.maps.Map(document.getElementById('gmap'), {
+        center: origin,
+        zoom: 5
+    });
+    gmap.setMapTypeId(google.maps.MapTypeId.ROADMAP);
+
+    // Turn on bicycling layer:
+    var bikeLayer = new google.maps.BicyclingLayer();
+    bikeLayer.setMap(gmap);
+}
+
+function markMap(place) {
+    // Place a marker at user's detected location, or their selected start point:
+    new google.maps.Marker({
+        position: place,
+        map: gmap
+    });
+}
+
+function centreMap(place) {
+    gmap.setCenter(new google.maps.LatLng(place));
+    gmap.setZoom(8);      // This will trigger a zoom_changed on the map
+}
+
 
 // Set up autocomplete:
 var input = document.querySelector("#start");
@@ -37,27 +83,6 @@ input.addEventListener('awesomplete-selectcomplete', (e) => {
     input.value = e.text.label;
     // Start ProcGen
 });
-
-var gmap;
-function initMap() {
-    gmap = new google.maps.Map(document.getElementById('gmap'), {
-        center: {lat: 51, lng: -3},
-        zoom: 3
-    });
-    // Turn on bicycling layer:
-    var bikeLayer = new google.maps.BicyclingLayer();
-    bikeLayer.setMap(gmap);
-    // Place a marker at user's detected location, or their selected start point:
-    var latLng = new google.maps.LatLng(40,0);
-    var marker = new google.maps.Marker({
-        position: latLng,
-        map: gmap
-    });
-}
-
-function centreMap(place) {
-    gmap.center(place);
-}
 
 document.querySelector('#options').addEventListener('submit', (event) => {
     event.preventDefault();
