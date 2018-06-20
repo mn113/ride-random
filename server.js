@@ -8,7 +8,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // Set up client:
 const gmapsApiKey = fs.readFileSync('gmaps-apikey.txt', 'utf-8').trim();
-const googleMapsClient = require('@google/maps').createClient({key: gmapsApiKey});
+const googleMapsClient = require('@google/maps').createClient({key: gmapsApiKey, Promise: Promise});
 
 // Serve static files:
 app.use(express.static('public'));
@@ -111,9 +111,11 @@ app.post('/newRoute', (req, res) => {
     console.log('Req.body:', prettyjson.render(req.body));
     // NOT ACTUALLY USING REQUEST FROM HERE ON
     var homeCoords = {lat: 51.45269, long: -2.59757};
-    var route = generateRoute(homeCoords); // params?
-    console.log('Route:', route);
-    res.status(200).send(route);
+    generateRoute(homeCoords)
+        .then(route => {
+            console.log('Route:', route);
+            res.status(200).send(route);
+        });
 });
 
 // Start server:
@@ -131,14 +133,19 @@ function pidToLatLong(pid) {
 // Generate an entire random route according to the form options:
 function generateRoute(start, circ = false, distance = 20, hills = 2) {
     var points = [[start.lat, start.long]];
-    // while dist < distance
-    var segment = makeSegment(5, [start.lat, start.long]);
-    var snappedSeg = snapToRoads(segment);  // ASYNC
-    setTimeout(() => {
-        console.log(snappedSeg);
-        points = points.concat(snappedSeg);
-        return points;
-    }, 3000);
+    var n = 3;
+    // WHILE LOOP IS WRONG IDEA, BECAUSE ALL LOOPS COMPLETE BEFORE FIRST Promise
+    // MAYBE A PROMISE INSIDE A GENERATOR?
+    while (n > 0) {
+        var segment = makeSegment(5, points[points.length - 1]);
+        snapToRoads(segment)
+        // eslint-disable-next-line no-loop-func
+            .then(snappedSeg => {
+                points = points.concat(snappedSeg);
+            });
+        n--;
+        if (n === 0) return Promise.resolve(points);
+    }
 }
 
 // Generate a segment of consecutive random points:
@@ -174,8 +181,8 @@ function getAngle(pa, pb) {
 // Generate the next random point on from p using the known vector angle:
 function makeNextPoint(p, angle) {
     console.log("p:", p, ", angle:", angle);
-    // Let's try 30m steps:
-    var h = 0.0003;
+    // Let's try 300m steps:
+    var h = 0.003;
     // Anywhere except the quadrant we just came from:
     var newAngle = angle - 135 + 270 * Math.random();
     var dx = h * Math.sin(newAngle),
@@ -185,15 +192,18 @@ function makeNextPoint(p, angle) {
 
 // Send AJAX request to Roads API to get back road-accurate points:
 function snapToRoads(segment) {
-    googleMapsClient.nearestRoads({
+    return googleMapsClient.nearestRoads({
         points: segment
-    }, (err, resp) => {
-        if (!err) {
+    }).asPromise()
+        .then((resp) => {
             console.log("Snapped:", prettyjson.render(resp.json));
             return resp.json.snappedPoints.map(sp => [sp.location.latitude, sp.location.longitude]);
-        }
-        else {
+        })
+        .catch((err) => {
             console.log(err);
-        }
-    });
+        });
+}
+
+function routeToPolyline(route) {
+
 }

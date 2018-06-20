@@ -44,6 +44,15 @@ function initMap() {
         center: {lat: 51, lng: -3},
         zoom: 3
     });
+    // Turn on bicycling layer:
+    var bikeLayer = new google.maps.BicyclingLayer();
+    bikeLayer.setMap(gmap);
+    // Place a marker at user's detected location, or their selected start point:
+    var latLng = new google.maps.LatLng(40,0);
+    var marker = new google.maps.Marker({
+        position: latLng,
+        map: gmap
+    });
 }
 
 function centreMap(place) {
@@ -68,8 +77,33 @@ function requestRoute() {
     axios.post('/newRoute', options)
         .then(response => {
             console.log(response);
+            if (response.data && response.data.length > 1)
+                drawRoute(response.data);
         })
         .catch(error => {
             console.log(error);
         });
+}
+
+// Draw an array of points onto the Google map:
+function drawRoute(route) {
+    for (var i = 0; i < route.length; i++) {
+        var coords = route[i];
+        var latLng = new google.maps.LatLng(coords[0],coords[1]);
+        var marker = new google.maps.Marker({
+            position: latLng,
+            map: gmap
+        });
+    }
+    // or...
+    /*
+    gmap.data.add({
+        geometry: new google.maps.Polyline({   InvalidValueError: not a Geometry or LatLng or LatLngLiteral object
+            strokeColor: 'red',
+            strokeOpacity: 1,
+            strokeWeight: 3,
+            map: gmap
+        })
+    });
+    */
 }
