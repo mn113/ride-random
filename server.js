@@ -110,7 +110,7 @@ app.get('/elevation/:lat,:long', (req, res) => {
 app.post('/newRoute', (req, res) => {
     console.log('Req.body:', prettyjson.render(req.body));
     // NOT ACTUALLY USING REQUEST FROM HERE ON
-    var homeCoords = {lat: 51.45269, long: -2.59757};
+    var homeCoords = {lat: 51.45269, lng: -2.59757};
     generateRoute(homeCoords)
         .then(route => {
             console.log('Route:', route);
@@ -127,12 +127,99 @@ app.listen(3003, () => {
 
 // Send AJAX request to Google Places API to get lat & long of place with pid:
 function pidToLatLong(pid) {
+    // Frontend already does this (google.maps.Geocoder)
     // TODO
 }
 
+// Access Google Maps Directions API
+// Returns Promise
+function getDirections(from, to) {
+    return googleMapsClient.directions({
+        origin: from,
+        destination: to,
+        mode: "bicycling",
+        avoid: [],
+        units: "metric"
+    }).asPromise()
+        .then((resp) => {
+            console.log("Directions status:", resp.json.status);
+            if (resp.json.status === "OK") {
+                console.log("Directions:", prettyjson.render(resp.json.map((item) => {
+                    return {
+                        opp: item.overview_polyline.points
+                    };
+                })));
+                //return resp.json.map(sp => [sp.location.latitude, sp.location.longitude]);
+                // geocoded_waypoints[0].place_id
+                // routes[0].legs[0].distance.value
+                // overview_polyline.points
+            }
+        })
+        .catch((err) => {
+            console.log(err);
+        });
+}
+
+// Generate a number of random points, constrained to one quadrant around an origin point:
+function generatePoints(num, origin, radius, quadrant) {
+    var points = [];
+    while (points.length < num) {
+        // Make one random point inside a square centred on origin:
+        var delta;
+        var absDelta = {
+            lat: Math.abs(radius * Math.random()),
+            lng: Math.abs(radius * Math.random())
+        };
+        // Correct signs for quadrant:
+        if (quadrant === 1) delta = absDelta;
+        else if (quadrant === 2) delta = {lat: -absDelta.lat, lng: +absDelta.lng};
+        else if (quadrant === 3) delta = {lat: -absDelta.lat, lng: -absDelta.lng};
+        else if (quadrant === 4) delta = {lat: +absDelta.lat, lng: -absDelta.lng};
+
+        var point = {
+            lat: origin.lat + delta.lat,
+            lng: origin.lng + delta.lng
+        };
+        points.push(point);
+    }
+    console.log("Q", quadrant, points);
+    return points;
+}
+
+// Distance helper functions:
+const km2deg = (km) => km / 111;
+//const deg2km = (deg) => deg * 111;
+
+
 // Generate an entire random route according to the form options:
 function generateRoute(start, circ = false, distance = 20, hills = 2) {
-    var points = [[start.lat, start.long]];
+    var points = [];
+    var radius = km2deg(distance) / 3;
+    for (var q = 1; q <= 4; q++) {
+        points.push(snapToRoads(generatePoints(3, start, radius, q)));  // Promise
+    }
+    // Wait for all snapping to complete:
+    Promise.all(points).then(snappedPoints => {
+        //console.log("SnappedPoints:", snappedPoints);
+        // Sort each quadrant of points from origin's nearest to farthest:
+        // TODO
+        // Use distance matrix to join nearest points?
+        // TODO
+        getDirections(start, snappedPoints[0][0]).then(dir1 => {
+            console.log("Leg 1:", dir1);
+        });
+        // Flatten:
+        return Promise.resolve(Array.from(
+            start,
+            ...snappedPoints[0], ...snappedPoints[1],
+            ...snappedPoints[2], ...snappedPoints[3]
+        ));
+    });
+}
+
+// Generate an entire random route according to the form options:
+function generateRouteOld(start, circ = false, distance = 20, hills = 2) {
+    var points = [[start.lat, start.lng]];
     var n = 3;
     // WHILE LOOP IS WRONG IDEA, BECAUSE ALL LOOPS COMPLETE BEFORE FIRST Promise
     // MAYBE A PROMISE INSIDE A GENERATOR?
@@ -182,11 +269,11 @@ function getAngle(pa, pb) {
 function makeNextPoint(p, angle) {
     console.log("p:", p, ", angle:", angle);
     // Let's try 300m steps:
-    var h = 0.003;
+    var hop = km2deg(0.3);
     // Anywhere except the quadrant we just came from:
     var newAngle = angle - 135 + 270 * Math.random();
-    var dx = h * Math.sin(newAngle),
-        dy = h * Math.cos(newAngle);
+    var dx = hop * Math.sin(newAngle),
+        dy = hop * Math.cos(newAngle);
     return [p[0] + dx, p[1] + dy];
 }
 
@@ -196,12 +283,28 @@ function snapToRoads(segment) {
         points: segment
     }).asPromise()
         .then((resp) => {
-            console.log("Snapped:", prettyjson.render(resp.json));
-            return resp.json.snappedPoints.map(sp => [sp.location.latitude, sp.location.longitude]);
+            //console.log("Snapped:", prettyjson.render(resp.json));
+            var tidyPoints = resp.json.snappedPoints.map(sp => {
+                return {
+                    lat: sp.location.latitude,
+                    lng: sp.location.longitude,
+                    pid: sp.placeId
+                };
+            });
+            // Remove duplicate points:
+            return removeDuplicatePoints(tidyPoints);
         })
         .catch((err) => {
             console.log(err);
         });
+}
+
+// Remove excess objects with identical pids from array:
+function removeDuplicatePoints(arr) {
+    // eslint-disable-next-line no-shadow
+    return arr.filter((arr, index, self) =>
+        // Allow only the first item with a given pid:
+        self.findIndex(t => t.pid === arr.pid) === index);
 }
 
 function routeToPolyline(route) {
