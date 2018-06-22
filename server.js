@@ -144,11 +144,11 @@ function getDirections(from, to) {
         .then((resp) => {
             console.log("Directions status:", resp.json.status);
             if (resp.json.status === "OK") {
-                console.log("Directions:", prettyjson.render(resp.json.map((item) => {
-                    return {
-                        opp: item.overview_polyline.points
-                    };
-                })));
+                console.log("Directions:", prettyjson.render(resp.json));//.map((item) => {
+//                    return {
+//                        opp: item.overview_polyline.points
+//                    };
+//                })));
                 //return resp.json.map(sp => [sp.location.latitude, sp.location.longitude]);
                 // geocoded_waypoints[0].place_id
                 // routes[0].legs[0].distance.value
