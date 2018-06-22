@@ -58,23 +58,7 @@ app.get('/places/:typing', (req, res) => {
     });
 });
 
-// Snap points to road (requires at least 2 points):    FIXME work with series of points
-/*app.get('/nearRoads/:lat,:long', (req, res) => {
-    googleMapsClient.nearestRoads({
-        points: [parseFloat(req.params.lat), parseFloat(req.params.long)]
-    }, (err, resp) => {
-        if (!err) {
-            console.log(resp.json);
-            res.status(200).send('Nearest road: ' + resp.json);
-        }
-        else {
-            console.log(err);
-        }
-    });
-});
-*/
 // Get distance from A to B: [OK]
-
 app.get('/distance/:from/:to', (req, res) => {
     googleMapsClient.distanceMatrix({
         origins: req.params.from,
@@ -115,6 +99,10 @@ app.post('/newRoute', (req, res) => {
         .then(route => {
             console.log('Route:', route);
             res.status(200).send(route);
+        })
+        .catch(err => {
+            console.log(err);
+            res.status(err.status).send(err);
         });
 });
 
@@ -144,15 +132,14 @@ function getDirections(from, to) {
         .then((resp) => {
             console.log("Directions status:", resp.json.status);
             if (resp.json.status === "OK") {
-                console.log("Directions:", prettyjson.render(resp.json));//.map((item) => {
-//                    return {
-//                        opp: item.overview_polyline.points
-//                    };
-//                })));
-                //return resp.json.map(sp => [sp.location.latitude, sp.location.longitude]);
-                // geocoded_waypoints[0].place_id
-                // routes[0].legs[0].distance.value
-                // overview_polyline.points
+                console.log("Directions:", prettyjson.render(resp.json.routes.map((item) => {
+                    return {
+                        summary: item.summary,
+                        distance: item.legs[0].distance.value,
+                        steps: item.steps,
+                        opp: item.overview_polyline.points
+                    };
+                })));
             }
         })
         .catch((err) => {
@@ -199,8 +186,8 @@ function generateRoute(start, circ = false, distance = 20, hills = 2) {
         points.push(snapToRoads(generatePoints(3, start, radius, q)));  // Promise
     }
     // Wait for all snapping to complete:
-    Promise.all(points).then(snappedPoints => {
-        //console.log("SnappedPoints:", snappedPoints);
+    return Promise.all(points).then(snappedPoints => {
+        console.log("SnappedPoints:", snappedPoints);
         // Sort each quadrant of points from origin's nearest to farthest:
         // TODO
         // Use distance matrix to join nearest points?
@@ -209,11 +196,9 @@ function generateRoute(start, circ = false, distance = 20, hills = 2) {
             console.log("Leg 1:", dir1);
         });
         // Flatten:
-        return Promise.resolve(Array.from(
-            start,
-            ...snappedPoints[0], ...snappedPoints[1],
-            ...snappedPoints[2], ...snappedPoints[3]
-        ));
+        var flat = [start, snappedPoints].reduce((arr, val) => arr.concat(val), []);
+        console.log("Flat:", flat);
+        return flat;
     });
 }
 
@@ -260,8 +245,8 @@ function makeSegment(numPoints, firstPoint) {
 function getAngle(pa, pb) {
     console.log("pa:", pa, ", pb:", pb);
     // Note: [lat,long] converts to [y,x] for trig
-    var dy = pb[0] - pa[0],
-        dx = pb[1] - pa[1];
+    var dy = pb.lat - pa.lat,
+        dx = pb.lng - pa.lng;
     return Math.atan2(dy, dx) * 180 / Math.PI;
 }
 
@@ -274,15 +259,19 @@ function makeNextPoint(p, angle) {
     var newAngle = angle - 135 + 270 * Math.random();
     var dx = hop * Math.sin(newAngle),
         dy = hop * Math.cos(newAngle);
-    return [p[0] + dx, p[1] + dy];
+    return {
+        lat: p.lat + dy,
+        lng: p.lng + dx
+    };
 }
 
 // Send AJAX request to Roads API to get back road-accurate points:
 function snapToRoads(segment) {
+    console.log("Seg to snap:", segment);
     return googleMapsClient.nearestRoads({
         points: segment
     }).asPromise()
-        .then((resp) => {
+        .then(resp => {
             //console.log("Snapped:", prettyjson.render(resp.json));
             var tidyPoints = resp.json.snappedPoints.map(sp => {
                 return {
@@ -291,6 +280,7 @@ function snapToRoads(segment) {
                     pid: sp.placeId
                 };
             });
+            console.log("tdp", tidyPoints);
             // Remove duplicate points:
             return removeDuplicatePoints(tidyPoints);
         })
@@ -304,7 +294,7 @@ function removeDuplicatePoints(arr) {
     // eslint-disable-next-line no-shadow
     return arr.filter((arr, index, self) =>
         // Allow only the first item with a given pid:
-        self.findIndex(t => t.pid === arr.pid) === index);
+        self.findIndex(p => p.lat === arr.lat && p.lng === arr.lng) === index);
 }
 
 function routeToPolyline(route) {

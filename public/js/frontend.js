@@ -160,10 +160,8 @@ var rideRandom = (function() {
         drawRoute: function(route) {
             console.log("mapping.drawRoute called");
             for (var i = 0; i < route.length; i++) {
-                var coords = route[i];
-                var latLng = new google.maps.LatLng(coords[0],coords[1]);
                 new google.maps.Marker({
-                    position: latLng,
+                    position: new google.maps.LatLng(route[i]),
                     map: gmap
                 });
             }
