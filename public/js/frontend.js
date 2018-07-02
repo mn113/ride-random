@@ -166,6 +166,15 @@ var rideRandom = (function() {
                 });
             }
             // or...
+            var flightPath = new google.maps.Polyline({
+                path: route,
+                //geodesic: true,
+                strokeColor: 'red',
+                strokeOpacity: 1,
+                strokeWeight: 2
+            });
+
+            flightPath.setMap(gmap);
             /*
             gmap.data.add({
                 geometry: new google.maps.Polyline({

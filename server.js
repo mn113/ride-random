@@ -196,7 +196,7 @@ function generateRoute(start, circ = false, distance = 20, hills = 2) {
             console.log("Leg 1:", dir1);
         });
         // Flatten:
-        var flat = [start, snappedPoints].reduce((arr, val) => arr.concat(val), []);
+        var flat = [start, ...snappedPoints].reduce((arr1, arr2) => arr1.concat(arr2), []);
         console.log("Flat:", flat);
         return flat;
     });
