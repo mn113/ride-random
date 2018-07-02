@@ -148,33 +148,64 @@ var rideRandom = (function() {
             gmap.setZoom(8);      // This will trigger a zoom_changed on the map
         },
 
-        markMap: function(place) {
+        markMap: function(place, icon = null) {
+            var icons = {
+                start: {
+                    path: 'M-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0',
+                    fillColor: 'green',
+                    fillOpacity: 1,
+                    strokeColor: 'black',
+                    strokeWeight: 3,
+                    scale: 1,
+                    size: new google.maps.Size(8, 8),
+                    origin: new google.maps.Point(0, 0),
+                    anchor: new google.maps.Point(4, 4)
+                },
+                finish: {
+                    //path: google.maps.SymbolPath.CIRCLE,
+                    path: 'M-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0',
+                    fillColor: 'red',
+                    fillOpacity: 1,
+                    strokeColor: 'black',
+                    strokeWeight: 3,
+                    scale: 1,
+                    size: new google.maps.Size(8, 8),
+                    origin: new google.maps.Point(0, 0),
+                    anchor: new google.maps.Point(4, 4)
+                }
+            };
             // Place a marker at user's detected location, or their selected start point:
             new google.maps.Marker({
-                position: place,
-                map: gmap
+                position: new google.maps.LatLng(place),
+                map: gmap,
+                icon: icon ? icons[icon] : null
             });
+            console.log("marked");
         },
 
         // Draw an array of points onto the Google map:
         drawRoute: function(route) {
             console.log("mapping.drawRoute called");
-            for (var i = 0; i < route.length; i++) {
+            /*for (var i = 0; i < route.length; i++) {
                 new google.maps.Marker({
                     position: new google.maps.LatLng(route[i]),
                     map: gmap
                 });
             }
+            */
             // or...
             var flightPath = new google.maps.Polyline({
                 path: route,
                 //geodesic: true,
-                strokeColor: 'red',
+                strokeColor: 'orange',
                 strokeOpacity: 1,
-                strokeWeight: 2
+                strokeWeight: 2,
+                map: gmap
             });
+            mapping.markMap(route[route.length - 1], 'finish');
+            mapping.markMap(route[0], 'start');
 
-            flightPath.setMap(gmap);
+            //flightPath.setMap(gmap);
             /*
             gmap.data.add({
                 geometry: new google.maps.Polyline({
